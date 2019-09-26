@@ -6,16 +6,15 @@ In this script, we explore the correlation between different variale and their
 effect on the rating of restaurants.
 
 
-Created on Thu Sep 19 21:40:39 2019
+Created on Thu Sep 17 21:40:39 2019
 
 @author: wumeiqi
 """
 
-
 import matplotlib.pyplot as plt # plotting library
 import seaborn as sns           # data visulization library
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score

@@ -1,45 +1,51 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Sep 17 22:36:48 2019
+In this script, we import and clean the data.
+
+
+Created on Tue Sep 10 22:36:48 2019
 
 @author: wumeiqi
 """
+
 
 #%% Importing Libraries
 import pandas as pd
 import numpy as np
 import ast
 
-
 #%% Import the data
-df = pd.read_csv('../DATA/zomato.csv', nrows=1000)
+df = pd.read_csv('./DATA/zomato.csv')
 print('dataset contains {} rows and {} columns'.format(df.shape[0],df.shape[1]))
 df.info()
 df.head()
 df.dtypes
-
 
 #%% Data Cleaning
 
 # Removing unnecessary columns
 column_to_drop=['url', 'phone','location']
 df.drop(columns=column_to_drop, axis=1, inplace=True)
+del column_to_drop
 
 # Renaming columns
 df.rename(columns={'approx_cost(for two people)':'average_cost',
                    'listed_in(type)':'type','listed_in(city)':'city'},inplace=True)
 
 # Adjust the column type
-df.oneline_order.replace(('Yes', 'No'), (True, False), inplace=True)
+df.online_order.replace(('Yes', 'No'), (True, False), inplace=True)
 df.book_table.replace(('Yes', 'No'), (True, False), inplace=True)
-df.average_cost = df.average_cost.apply(lambda x: int(x.replace(',', '')))
+
+# df.average_cost.unique()
+df.average_cost = df.average_cost.apply(lambda x: int(x.replace(',', '')) if isinstance(x, str) else x)
 # update the 'review_list' from string to list of tuples
 df.reviews_list = df.reviews_list.apply(lambda x: ast.literal_eval(x))
 
-# Removing duplicates
-df.drop_duplicates(inplace=True)
+# Removing duplicate rows
+df = df.loc[df.astype(str).drop_duplicates().index]
 
+#%%
 # Checking NaN and Null
 print("Percentage of null and na values in df")
 ((df.isnull() | df.isna()).sum()*100/ df.index.size).round(2)
@@ -62,12 +68,12 @@ def get_rate(x):
     :rtype: float
     '''
     if not x or len(x) <= 1: return None 
-    rate = [float(i[0].replace('Rated','').strip()) for i in x if type(i[0]==str)]
+    rate = [float(i[0].replace('Rated','').strip()) for i in x if type(i[0])==str]
     return round(sum(rate)/len(rate), 1)
     
 # create a new column
 df['review_rate'] = df.reviews_list.apply(lambda x: get_rate(x))
-df.loc[:,['rate', 'review_rate']].sample(10, random_state=1)
+df.loc[:,['rate', 'review_rate']].sample(10, random_state=100)
 
 # Update the 'rate' column 
 nan_index = df.query('rate != rate & review_rate == review_rate').index
@@ -106,7 +112,7 @@ df.query('dish_liked!=dish_liked')[['dish_liked', 'dish_reviewed']].sample(5, ra
 
 nan_index = df.query('dish_liked!=dish_liked & dish_reviewed == dish_reviewed').index
 for i in nan_index:
-    df['dish_liked'][i]=df['dish_reviewed'][i]
+    df.loc[i, 'dish_liked']=df.loc[i,'dish_reviewed']
 
 del menu_list
 del menu_set

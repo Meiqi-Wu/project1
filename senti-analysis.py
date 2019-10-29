@@ -88,7 +88,7 @@ print('Test set accuracy: {}'.format(acc))
 
 # what are the strongly predictive features
 words = list(tokenizer.word_index.keys()) # bag of words
-x = np.eye(Xtest.shape[1])
+x = np.eye(len(words))
 probs = model.predict(x)[:,0]
 ind = np.argsort(probs)
 
@@ -100,28 +100,28 @@ bad_probs = probs[ind[-10:]]
 
 print('Good words\t    P(fresh|word)')
 for w, p in zip(good_words, good_probs):
-    print('{}  {}'.format(w, p))
+    print('   {}  {}'.format(w, p))
     
 print('Bad words\t    P(fresh|word)')
 for w, p in zip(bad_words, bad_probs):
-    print('{}  {}'.format(w, p))
+    print('   {}  {}'.format(w, p))
 
 #%% check the mis-predictions
 
-prob = model.predict(Xtest)[:, 0]
-predict = prob>=0.5
+prob = model.predict(X)[:, 0]
+pred = prob>=0.5
 
-mis_pos = np.argsort(prob[Ytest==1])[:5]
-mis_nega = np.argsort(prob[Ytest==0])[-5:]
+mis_pos = np.argsort(prob[Y==1])[-5:]
+mis_nega = np.argsort(prob[Y==0])[5:]
 
 print('Mis-predicted positive reviews')
 for row in mis_pos:
-    print(ratings_df[Ytest==1].review.irow[row])
+    print(ratings_df[Y==1].review.irow[row])
     print('\n')
 
 print('Mis-predicted negative reviews')
 for row in mis_nega:
-    print(ratings_df[Ytest==0].review.irow[row])
+    print(ratings_df[Y==0].review.irow[row])
     print('\n')
 
 

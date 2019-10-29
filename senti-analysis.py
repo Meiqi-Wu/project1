@@ -111,17 +111,17 @@ for w, p in zip(bad_words, bad_probs):
 prob = model.predict(X)[:, 0]
 pred = prob>=0.5
 
-mis_pos = np.argsort(prob[Y==1])[-5:]
-mis_nega = np.argsort(prob[Y==0])[5:]
+mis_pos = np.argsort(prob[Y[0]==1])[-5:]
+mis_nega = np.argsort(prob[Y[0]==0])[5:]
 
 print('Mis-predicted positive reviews')
 for row in mis_pos:
-    print(ratings_df[Y==1].review.irow[row])
+    print(ratings_df[Y[0]==1].review.irow[row])
     print('\n')
 
 print('Mis-predicted negative reviews')
 for row in mis_nega:
-    print(ratings_df[Y==0].review.irow[row])
+    print(ratings_df[Y[0]==0].review.irow[row])
     print('\n')
 
 

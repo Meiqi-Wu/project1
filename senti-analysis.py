@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-In this script, I conducted sensiment analysis of reviews abased on a LSTM model.
+In this script, I conducted sensiment analysis of reviews based on a LSTM model.
 
 Created on Mon Sep 18 21:15:12 2019
 
@@ -19,6 +19,9 @@ import re
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
+import random
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 #%% prepare the data
 ## Extract reviews and ratings of each restaurant and create a dataframe with it
 #ratings = []
@@ -70,58 +73,78 @@ print(model.summary())
 # convert senti(0/1) to one-hot vectors
 Y = pd.get_dummies(ratings_df['senti'].astype(int)).values
 # split the training and test set
-Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, Y, test_size=0.3)
+random.seed(9000)
+test_id = np.random.choice(X.shape[0], size=round(0.3*X.shape[0]), replace=False)
+Xtrain, Xtest, Ytrain, Ytest = X[~test_id], X[test_id], Y[~test_id], Y[test_id]
+
+#Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, Y, test_size=0.3)
 print(Xtrain.shape, Ytrain.shape)
 print(Xtest.shape, Ytest.shape)
 
 #%% 
-batch_size=1600
+batch_size=1024
 model.fit(Xtrain, Ytrain, epochs=5, batch_size=batch_size)
 
 
 #%% Evaluation
 loss, acc = model.evaluate(Xtest, Ytest, batch_size=batch_size)
 print('Test set loss: {}'.format(loss))
-print('Test set accuracy: {}'.format(acc))
+print('Test set accuracy: {}'.format(acc)) # 0.95356
+
+#%%
 
 #%% Intepretation
 
 # what are the strongly predictive features
-words = list(tokenizer.word_index.keys()) # bag of words
-x = np.eye(len(words))
-probs = model.predict(x)[:,0]
+words = list(tokenizer.word_index.keys())[:max_features] # bag of words
+x = np.concatenate((np.zeros((max_features-1, X.shape[1]-1), dtype=np.int8),
+                    np.array([[int(i)] for i in range(1, max_features)])), axis=1)
+probs = model.predict(x)[:,1]
 ind = np.argsort(probs)
 
-good_words = words[ind[:10]]
-bad_words = words[ind[-10:]]
+bad_words = [words[ind[i]] for i in range(10)]
+good_words = [words[ind[-i]] for i in range(1,11)]
 
-good_probs = probs[ind[:10]]
-bad_probs = probs[ind[-10:]]
+bad_probs = probs[ind[:10]]
+good_probs = probs[ind[-10:]]
 
-print('Good words\t    P(fresh|word)')
+print('Good words\t    P(satisfactory|word)')
 for w, p in zip(good_words, good_probs):
     print('   {}  {}'.format(w, p))
     
-print('Bad words\t    P(fresh|word)')
+print('Bad words\t    P(satisfactory|word)')
 for w, p in zip(bad_words, bad_probs):
     print('   {}  {}'.format(w, p))
 
 #%% check the mis-predictions
+Y_hat = model.predict(Xtest)
+prob = Y_hat[:, 1]
+pred_senti = (prob >=0.5)*1
 
-prob = model.predict(X)[:, 0]
-pred = prob>=0.5
+ratings_df_test = ratings_df.loc[test_id, ['score','senti', 'review']]
+ratings_df_test['pred_senti']=pred_senti
 
-mis_pos = np.argsort(prob[Y[0]==1])[-5:]
-mis_nega = np.argsort(prob[Y[0]==0])[5:]
+mis_pos = np.array(ratings_df_test.query('senti==1 & pred_senti==0').index)
+mis_nega = np.array(ratings_df_test.query('senti==0 & pred_senti==1').index)
 
 print('Mis-predicted positive reviews')
-for row in mis_pos:
-    print(ratings_df[Y[0]==1].review.irow[row])
+print('\n')
+random.seed(1)
+for row in np.random.choice(mis_pos, 5, replace=False):
+    print(ratings_df_test.loc[row, 'score'])
+    print(ratings_df_test.loc[row, 'pred_senti'])
+    
+    print(ratings_df_test.loc[row, 'review'])
     print('\n')
 
 print('Mis-predicted negative reviews')
-for row in mis_nega:
-    print(ratings_df[Y[0]==0].review.irow[row])
+print('\n')
+random.seed(2)
+for row in np.random.choice(mis_nega, 5, replace=False):
+    print(ratings_df_test.loc[row, 'score'])
+    print(ratings_df_test.loc[row, 'pred_senti'])
+    
+    print(ratings_df_test.loc[row, 'review'])
     print('\n')
 
 

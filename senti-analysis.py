@@ -40,7 +40,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 #ratings_df['review'] = ratings_df['review'].apply(lambda x: re.sub('[^a-zA-Z0-9\s]', '', x))
 #ratings_df.to_csv('./DATA/Ratings.csv')
 #%% Read the Rating data
-ratings_df = pd.read_csv('./DATA/Ratings.csv')
+ratings_df = pd.read_csv('./DATA/Ratings.csv').drop('Unnamed: 0', axis=1)
 ratings_df.review = ratings_df.review.astype(str)
 
 
@@ -75,7 +75,8 @@ Y = pd.get_dummies(ratings_df['senti'].astype(int)).values
 # split the training and test set
 random.seed(9000)
 test_id = np.random.choice(X.shape[0], size=round(0.3*X.shape[0]), replace=False)
-Xtrain, Xtest, Ytrain, Ytest = X[~test_id], X[test_id], Y[~test_id], Y[test_id]
+train_id = ~np.isin(np.array(range(X.shape[0])), test_id)
+Xtrain, Xtest, Ytrain, Ytest = X[train_id], X[test_id], Y[train_id], Y[test_id]
 
 #Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, Y, test_size=0.3)
 print(Xtrain.shape, Ytrain.shape)
@@ -91,7 +92,6 @@ loss, acc = model.evaluate(Xtest, Ytest, batch_size=batch_size)
 print('Test set loss: {}'.format(loss))
 print('Test set accuracy: {}'.format(acc)) # 0.95356
 
-#%%
 
 #%% Intepretation
 
@@ -124,23 +124,47 @@ pred_senti = (prob >=0.5)*1
 ratings_df_test = ratings_df.loc[test_id, ['score','senti', 'review']]
 ratings_df_test['pred_senti']=pred_senti
 
-mis_pos = np.array(ratings_df_test.query('senti==1 & pred_senti==0').index)
-mis_nega = np.array(ratings_df_test.query('senti==0 & pred_senti==1').index)
+true_pos = np.array(ratings_df_test.query('senti==1 & pred_senti==1').index)
+true_neg = np.array(ratings_df_test.query('senti==0 & pred_senti==0').index)
+false_neg = np.array(ratings_df_test.query('senti==1 & pred_senti==0').index)
+false_pos = np.array(ratings_df_test.query('senti==0 & pred_senti==1').index)
+#%%
+print('Confusion Matrix')
+print('          y=1      y=0 ')
+print('y_hat=1  ',true_pos.shape[0], false_pos.shape[0])
+print('y_hat=0  ',false_neg.shape[0],' ', true_neg.shape[0])
 
-print('Mis-predicted positive reviews')
+recall = true_pos.shape[0]/(true_pos.shape[0]+false_neg.shape[0])
+print('Recall: ', recall)
+
+precision = true_pos.shape[0]/(true_pos.shape[0]+false_pos.shape[0])
+print('precision: ', precision)
+#%%
+print('True negative reviews')
 print('\n')
-random.seed(1)
-for row in np.random.choice(mis_pos, 5, replace=False):
+random.seed(12)
+for row in np.random.choice(true_neg, 10, replace=False):
     print(ratings_df_test.loc[row, 'score'])
     print(ratings_df_test.loc[row, 'pred_senti'])
     
     print(ratings_df_test.loc[row, 'review'])
     print('\n')
 
-print('Mis-predicted negative reviews')
+
+print('False negative reviews')
+print('\n')
+random.seed(1)
+for row in np.random.choice(false_neg, 10, replace=False):
+    print(ratings_df_test.loc[row, 'score'])
+    print(ratings_df_test.loc[row, 'pred_senti'])
+    
+    print(ratings_df_test.loc[row, 'review'])
+    print('\n')
+
+print('False positive reviews')
 print('\n')
 random.seed(2)
-for row in np.random.choice(mis_nega, 5, replace=False):
+for row in np.random.choice(false_pos, 10, replace=False):
     print(ratings_df_test.loc[row, 'score'])
     print(ratings_df_test.loc[row, 'pred_senti'])
     
